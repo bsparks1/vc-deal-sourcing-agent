@@ -1,9 +1,11 @@
-# Reading and writing companies and agent runs in the SQLite database.
+# Reading and writing companies in the SQLite database.
 # The agent's tools use it to check and save companies; the pages use it to list companies,
-# show one company, and move companies between inbox, watchlist, and passed.
-# Connection and table setup live in scout/db.py; feedback lives in scout/feedback.py.
+# show one company, and move companies between review (new), watchlist, and passed.
+# Connection and table setup live in scout/db.py; agent runs in scout/runs.py; feedback in
+# scout/feedback.py.
 
 import json
+from datetime import datetime, timedelta, timezone
 
 from scout.db import get_connection, now
 
@@ -51,51 +53,6 @@ def save_company(company: dict) -> int:
         cursor = conn.execute(f"INSERT INTO companies ({names}) VALUES ({placeholders})", values)
         conn.commit()
         return cursor.lastrowid
-    finally:
-        conn.close()
-
-
-def create_run(request: str, trigger: str = "manual") -> int:
-    """Record that an agent run has started ('manual' or 'scheduled') and return its id."""
-    conn = get_connection()
-    try:
-        cursor = conn.execute(
-            "INSERT INTO runs (request, started_at, status, trigger) VALUES (?, ?, 'running', ?)",
-            (request, now(), trigger),
-        )
-        conn.commit()
-        return cursor.lastrowid
-    finally:
-        conn.close()
-
-
-def list_runs(limit: int = 10, trigger: str | None = None) -> list[dict]:
-    """Return the most recent agent runs, newest first, optionally only one trigger type."""
-    conn = get_connection()
-    try:
-        if trigger:
-            rows = conn.execute("SELECT * FROM runs WHERE trigger = ? ORDER BY id DESC LIMIT ?",
-                                (trigger, limit)).fetchall()
-        else:
-            rows = conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-    finally:
-        conn.close()
-    return [dict(row) for row in rows]
-
-
-def finish_run(run_id: int, status: str, error: str | None = None) -> int:
-    """Mark a run as finished, count the companies it saved, and return that count."""
-    conn = get_connection()
-    try:
-        saved = conn.execute(
-            "SELECT COUNT(*) FROM companies WHERE run_id = ?", (run_id,)
-        ).fetchone()[0]
-        conn.execute(
-            "UPDATE runs SET finished_at = ?, status = ?, companies_saved = ?, error = ? WHERE id = ?",
-            (now(), status, saved, error, run_id),
-        )
-        conn.commit()
-        return saved
     finally:
         conn.close()
 
@@ -161,6 +118,22 @@ def update_founders(company_id: int, founders: list[dict]) -> None:
         conn.close()
 
 
+# Where a watchlist company is in the fund's process. Shown as a dropdown on the Watchlist.
+DEAL_STATUSES = {"watching": "👀 Watching", "reached_out": "✉️ Reached out",
+                 "in_conversation": "💬 In conversation"}
+
+
+def set_deal_status(company_id: int, deal_status: str) -> None:
+    """Update where a watchlist company is in the process (e.g. 'reached_out')."""
+    conn = get_connection()
+    try:
+        conn.execute("UPDATE companies SET deal_status = ?, updated_at = ? WHERE id = ?",
+                     (deal_status, now(), company_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def set_company_status(company_id: int, status: str) -> None:
     """Move a company to 'watching' (watchlist) or 'passed'."""
     conn = get_connection()
@@ -172,3 +145,32 @@ def set_company_status(company_id: int, status: str) -> None:
         conn.commit()
     finally:
         conn.close()
+
+
+def pipeline_stats() -> dict:
+    """Headline numbers for the dashboard: companies in each stage of the pipeline,
+    how many were found in the last 7 days, and the average score of those awaiting review."""
+    conn = get_connection()
+    try:
+        by_status = dict(conn.execute(
+            "SELECT status, COUNT(*) FROM companies GROUP BY status").fetchall())
+        by_deal = dict(conn.execute(
+            "SELECT deal_status, COUNT(*) FROM companies WHERE status = 'watching' "
+            "GROUP BY deal_status").fetchall())
+        # Timestamps are ISO text, so comparing as text works for "newer than".
+        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat(timespec="seconds")
+        found_7d = conn.execute("SELECT COUNT(*) FROM companies WHERE created_at >= ?",
+                                (week_ago,)).fetchone()[0]
+        avg_new = conn.execute(
+            "SELECT AVG(score_total) FROM companies WHERE status = 'new'").fetchone()[0]
+    finally:
+        conn.close()
+    return {
+        "new": by_status.get("new", 0), "watching": by_status.get("watching", 0),
+        "passed": by_status.get("passed", 0), "found_7d": found_7d,
+        "avg_new_score": round(avg_new) if avg_new is not None else None,
+        # Older rows saved before deal_status existed count as plain "watching".
+        "deal": {key: by_deal.get(key, 0) for key in DEAL_STATUSES}
+                | {"watching": by_deal.get("watching", 0) + by_deal.get(None, 0)},
+    }
+

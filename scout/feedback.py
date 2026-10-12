@@ -1,8 +1,10 @@
-# Everything about the fund's reviews: storing thumbs up / down in SQLite, and turning them
-# into a short "learned preferences" paragraph. The Inbox calls update_learned_preferences()
-# after each review; scout/agent.py adds the newest paragraph to the agent's system prompt
-# on its next run. This is in-context learning: no model is trained, and exactly what the
+# Everything about the fund's reviews: storing swipes (thumbs up / down) in SQLite, and turning
+# them into a short "learned preferences" paragraph. The Explore page asks for a background
+# refresh after each swipe; scout/agent.py adds the newest paragraph to the agent's system
+# prompt on its next run. This is in-context learning: no model is trained, and exactly what the
 # agent was told is visible in traces.
+
+import threading
 
 from langchain_anthropic import ChatAnthropic
 
@@ -54,7 +56,7 @@ def update_learned_preferences() -> str | None:
         api_key=config.ANTHROPIC_API_KEY,
         max_tokens=config.FEEDBACK_MAX_TOKENS,
         # Low effort: summarizing a list of reviews is easy, and the fund is waiting on it
-        # after each click in the Inbox, so speed matters more than deep reasoning here.
+        # when it refreshes after swipes, so speed matters more than deep reasoning here.
         output_config={"effort": "low"},
     )
     reviews = "\n".join(format_review(item) for item in feedback)
@@ -64,19 +66,59 @@ def update_learned_preferences() -> str | None:
     return summary
 
 
+# Re-summarizing takes a few seconds (one LLM call), which is too slow to wait for after
+# every swipe. So swipes ask for a refresh in a background thread instead. The lock makes
+# sure only one summary runs at a time; "pending" makes sure a swipe that arrives while one
+# is running still gets included (the worker loops once more).
+_refresh_lock = threading.Lock()
+_refresh_pending = False
+
+
+def refresh_learned_preferences_in_background() -> None:
+    """Ask for the learned preferences to be re-summarized, without making the user wait."""
+    global _refresh_pending
+    _refresh_pending = True
+    if _refresh_lock.locked():
+        return  # a refresh is already running; it will pick up this request when it loops
+
+    def worker() -> None:
+        global _refresh_pending
+        with _refresh_lock:
+            while _refresh_pending:
+                _refresh_pending = False
+                try:
+                    update_learned_preferences()
+                except Exception as error:  # e.g. API down: the swipes are still saved
+                    print(f"Couldn't update learned preferences: {error}")
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
 # --- Storing reviews and learned preferences ---
 
-def add_feedback(company_id: int, verdict: str, reason: str) -> None:
-    """Record a thumbs up ('up') or down ('down') on a company, with an optional reason.
+def add_feedback(company_id: int, verdict: str, reason: str = "") -> int:
+    """Record a swipe right ('up') or left ('down') on a company, with an optional reason.
 
-    Step 7 turns all of these into "learned preferences" for the agent's next run.
+    Returns the new feedback id, so a reason can be added right after the swipe.
+    These are turned into "learned preferences" for the agent's next run.
     """
     conn = get_connection()
     try:
-        conn.execute(
+        cursor = conn.execute(
             "INSERT INTO feedback (company_id, verdict, reason, created_at) VALUES (?, ?, ?, ?)",
             (company_id, verdict, reason, now()),
         )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def set_feedback_reason(feedback_id: int, reason: str) -> None:
+    """Add or replace the reason on a review (the optional "why?" after a swipe)."""
+    conn = get_connection()
+    try:
+        conn.execute("UPDATE feedback SET reason = ? WHERE id = ?", (reason, feedback_id))
         conn.commit()
     finally:
         conn.close()

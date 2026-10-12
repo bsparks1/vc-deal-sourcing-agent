@@ -1,15 +1,11 @@
 # The Fund Profile page: a form where the fund describes what it invests in.
 # The agent reads this profile to know what a "good" company looks like, and the daily
 # cadence settings here control the automatic scheduled runs (scout/scheduler.py).
-# Streamlit shows every file in pages/ as a sidebar link; the "1_" prefix sets its order.
 
 import streamlit as st
 
-from scout import db
+from scout import db, feedback
 from scout.defaults import DEFAULT_FUND_PROFILE
-from scout.page_setup import setup_page
-
-setup_page("Fund Profile")  # title, database tables, daily scheduler
 
 st.title("Fund Profile")
 st.write("Tell Scout what your fund invests in. The agent uses this to judge every company it finds.")
@@ -75,3 +71,15 @@ if submitted:
             "schedule_hour": int(schedule_hour),
         })
         st.success("Fund profile saved.")
+
+# What the agent has learned from the fund's swipes, shown here because it works alongside
+# the criteria above: the profile comes first, learned preferences refine it.
+st.divider()
+st.subheader("What Scout has learned from your swipes")
+learned = feedback.get_learned_preferences()
+if learned:
+    st.write(learned["summary"])
+    st.caption(f"From {learned['feedback_count']} swipes · updated {learned['created_at'][:16]} (UTC)")
+else:
+    st.write("Nothing yet. Swipe on companies in Explore and Scout will adapt.")
+

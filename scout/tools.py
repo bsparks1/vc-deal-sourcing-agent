@@ -148,7 +148,7 @@ def save_candidate(
     funding_summary: str | None = None,
     traction: list[str] | None = None,
 ) -> dict:
-    """Save a scored company to the fund's inbox for review.
+    """Save a scored company to the fund's review queue (they review it in Explore).
 
     Only call this after score_against_thesis for the same domain. one_liner is one
     sentence on what the company makes. sources is the list of URLs your facts came from.

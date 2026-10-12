@@ -1,36 +1,37 @@
-# Scout's Streamlit web app (the entry point: `uv run streamlit run app.py`).
-# This is the home page: what Scout is, whether the API keys are set, and where to start.
-# Other pages live in pages/: Fund Profile, Source, Inbox, Watchlist, and Company.
+# Scout's entry point and router (`uv run streamlit run app.py`). Streamlit runs this file on
+# every page view: it does the shared setup (page settings, database, daily scheduler), draws
+# the sidebar with the always-available "Run agentic analysis" button, then shows the page
+# the user picked. The pages themselves live in views/.
 
 import streamlit as st
 
-from scout import config
-from scout.page_setup import setup_page
+from scout import config, db
+from scout.scheduler import start_scheduler
+from ui.run_dialog import run_analysis_dialog
 
-# Page title, database tables, and the daily scheduler (see scout/page_setup.py).
-setup_page("Scout")
+st.set_page_config(page_title="Scout", page_icon="🔭", layout="wide")
+db.init_db()  # create tables / add new columns (does nothing if already up to date)
+start_scheduler()  # daily automatic runs, if switched on in the Fund Profile
 
-st.title("Scout")
-st.write("An AI agent that researches the web to find early-stage companies that fit your fund's thesis.")
+# The pages, in sidebar order. Company is "hidden": it's opened from links, not the menu.
+pages = [
+    st.Page("views/dashboard.py", title="Dashboard", icon="📊", default=True),
+    st.Page("views/explore.py", title="Explore", icon="🃏"),
+    st.Page("views/watchlist.py", title="Watchlist", icon="⭐"),
+    st.Page("views/fund_profile.py", title="Fund Profile", icon="📝"),
+    st.Page("views/company.py", title="Company", icon="📄", visibility="hidden"),
+]
+current_page = st.navigation(pages)
 
-st.subheader("Setup check")
+with st.sidebar:
+    st.markdown("### 🔭 Scout")
+    st.caption("Your agentic deal-sourcing analyst")
+    if st.button("Run agentic analysis", type="primary", icon=":material/rocket_launch:",
+                 width="stretch"):
+        run_analysis_dialog()  # opens the pop-up over whatever page is showing
+    missing = config.missing_keys()
+    if missing:
+        st.error(f"Missing in .env: {', '.join(missing)}")
+    st.caption(f"Traces: [Phoenix]({config.PHOENIX_ENDPOINT})")
 
-# Show ✅ / ❌ per key. We only check whether a key is set; we never display its value.
-for name, value in config.REQUIRED_KEYS.items():
-    icon = "✅" if value else "❌"
-    st.write(f"{icon} `{name}`")
-
-missing = config.missing_keys()
-if missing:
-    # Name the missing keys so the fix is obvious, without revealing any key values.
-    st.error(f"Missing: {', '.join(missing)}. Add them to `.env` (see `.env.example`) and restart the app.")
-else:
-    st.success("All API keys are set.")
-
-st.caption(f"Model: `{config.MODEL}` · Traces: {config.PHOENIX_ENDPOINT}")
-
-st.subheader("How to use Scout")
-st.page_link("pages/1_Fund_Profile.py", label="1. Set up your Fund Profile", icon="📝")
-st.page_link("pages/2_Source.py", label="2. Send the agent to find companies", icon="🔎")
-st.page_link("pages/3_Inbox.py", label="3. Review what it found", icon="📥")
-st.page_link("pages/4_Watchlist.py", label="4. Track your watchlist", icon="⭐")
+current_page.run()  # draw the chosen page

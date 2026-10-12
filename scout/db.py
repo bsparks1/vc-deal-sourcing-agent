@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS companies (
     rationale TEXT,
     sources TEXT,                    -- JSON list of URLs
     traction TEXT,                   -- JSON list of signals (added in Step 9)
+    deal_status TEXT DEFAULT 'watching',  -- for watchlist companies: 'watching' | 'reached_out' | 'in_conversation'
     status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'watching', 'passed')),
     run_id INTEGER REFERENCES runs(id),
     created_at TEXT,
@@ -121,7 +122,7 @@ def get_connection() -> sqlite3.Connection:
 # Columns added after a table was first created. "CREATE TABLE IF NOT EXISTS" never changes
 # a table that already exists, so init_db adds any of these that are missing.
 ADDED_COLUMNS = {
-    "companies": {"traction": "TEXT"},
+    "companies": {"traction": "TEXT", "deal_status": "TEXT DEFAULT 'watching'"},
     "fund_profile": {"schedule_enabled": "INTEGER DEFAULT 0", "schedule_hour": "INTEGER DEFAULT 9"},
     "runs": {"trigger": "TEXT DEFAULT 'manual'"},
 }

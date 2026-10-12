@@ -7,7 +7,7 @@ import threading
 import time
 from datetime import datetime
 
-from scout import companies, config, db
+from scout import config, db, runs
 from scout.agent import run_agent
 
 THREAD_NAME = "scout-scheduler"
@@ -45,7 +45,7 @@ def run_scheduled_if_due() -> dict | None:
     """Check the schedule and, if a run is due, run the agent. Returns the run's result or None."""
     db.init_db()
     profile = db.get_fund_profile()
-    last = companies.list_runs(limit=1, trigger="scheduled")
+    last = runs.list_runs(limit=1, trigger="scheduled")
     last_start = to_local(last[0]["started_at"]) if last else None
     if not is_run_due(profile, datetime.now().astimezone(), last_start):
         return None

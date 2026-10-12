@@ -1,0 +1,7 @@
+# Streamlit settings for Scout: a consistent accent color, and no anonymous usage statistics.
+
+[theme]
+primaryColor = "#4F46E5"
+
+[browser]
+gatherUsageStats = false

@@ -2,6 +2,16 @@
 
 An agentic deal-sourcing analyst for VC funds. See `SPEC.md` for the full plan.
 
+## How it's organized
+
+- `app.py`: the entry point and router. Shared setup, the sidebar's "Run agentic analysis" button, page menu.
+- `views/`: the pages. Dashboard, Explore (swipe review), Watchlist, Fund Profile, Company.
+- `ui/`: UI pieces shared by several pages (swipe card, company detail sections, run dialog).
+- `scout/`: the backend, with no UI code. Agent, tools, scoring, founders, feedback learning,
+  change tracking, scheduler, and the SQLite database.
+- `evals/`: LLM-as-judge evals and the before/after comparison.
+- `scripts/`: terminal helpers to try each piece on its own.
+
 ## Install
 
 Requires [uv](https://docs.astral.sh/uv/).

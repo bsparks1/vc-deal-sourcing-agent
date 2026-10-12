@@ -8,7 +8,7 @@ from langchain_anthropic import ChatAnthropic
 from langgraph.errors import GraphRecursionError
 from langgraph.prebuilt import create_react_agent
 
-from scout import companies, config, db, feedback
+from scout import config, db, feedback, runs
 from scout.defaults import DEFAULT_FUND_PROFILE
 from scout.tools import (check_watchlist, read_page, research_founders, save_candidate,
                          score_against_thesis, search_web)
@@ -113,7 +113,7 @@ def run_agent(target: int = 3, focus: str = "", on_step: Callable[[str], None] =
     db.init_db()
 
     request = f"Find {target} new companies" + (f" focused on: {focus}" if focus else "")
-    run_id = companies.create_run(request, trigger)  # trigger: 'manual' or 'scheduled' (Step 12)
+    run_id = runs.create_run(request, trigger)  # trigger: 'manual' or 'scheduled' (Step 12)
     profile = db.get_fund_profile() or DEFAULT_FUND_PROFILE
     learned = feedback.get_learned_preferences()  # None until the fund reviews something
     agent = build_agent(profile, target, learned["summary"] if learned else None)
@@ -139,6 +139,6 @@ def run_agent(target: int = 3, focus: str = "", on_step: Callable[[str], None] =
     except Exception as exc:
         status, error = "failed", str(exc)
 
-    saved = companies.finish_run(run_id, status, error)
+    saved = runs.finish_run(run_id, status, error)
     return {"run_id": run_id, "status": status, "companies_saved": saved,
             "summary": summary, "error": error, "tracing_on": tracing_on}
