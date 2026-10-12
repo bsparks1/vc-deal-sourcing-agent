@@ -4,11 +4,13 @@
 
 import streamlit as st
 
-from scout import db, feedback
+from scout import db
 from scout.defaults import DEFAULT_FUND_PROFILE
+from ui.theme import page_header
+from ui.widgets import learned_preferences
 
-st.title("Fund Profile")
-st.write("Tell Scout what your fund invests in. The agent uses this to judge every company it finds.")
+page_header("Settings", "Fund profile",
+            "What your fund invests in. The agent uses this to judge every company it finds.")
 
 saved = db.get_fund_profile()
 if saved:
@@ -76,10 +78,4 @@ if submitted:
 # the criteria above: the profile comes first, learned preferences refine it.
 st.divider()
 st.subheader("What Scout has learned from your swipes")
-learned = feedback.get_learned_preferences()
-if learned:
-    st.write(learned["summary"])
-    st.caption(f"From {learned['feedback_count']} swipes · updated {learned['created_at'][:16]} (UTC)")
-else:
-    st.write("Nothing yet. Swipe on companies in Explore and Scout will adapt.")
-
+learned_preferences()

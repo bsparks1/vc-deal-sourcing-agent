@@ -12,7 +12,7 @@ def get_tavily_client() -> TavilyClient:
     """Create a Tavily client, or stop with a clear error if TAVILY_API_KEY is missing.
 
     Created inside a function (not at import time) so the app can still start and show
-    the ❌ status check when the key isn't set.
+    the missing-key warning when the key isn't set.
     """
     if not config.TAVILY_API_KEY:
         raise RuntimeError("Missing required key: TAVILY_API_KEY. Add it to your .env file.")

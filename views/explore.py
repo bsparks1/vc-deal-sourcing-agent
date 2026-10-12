@@ -7,6 +7,7 @@ import streamlit as st
 from scout import companies, feedback
 from ui.details import render_detail_tabs
 from ui.swipe import swipe_card
+from ui.theme import page_header
 
 # Quick "why?" reasons offered after a swipe, so feedback takes one click.
 REASONS = {
@@ -15,7 +16,7 @@ REASONS = {
              "Crowded market"],
 }
 
-st.title("Explore new companies")
+page_header("Explore", "New matches", "Swipe right to watch, left to pass. Best match first.")
 
 
 def decide(company: dict, direction: str) -> None:
@@ -36,7 +37,7 @@ def decide(company: dict, direction: str) -> None:
 # --- Optional "why?" for the previous swipe ---
 last = st.session_state.get("last_swipe")
 if last:
-    action = "added to your watchlist ⭐" if last["verdict"] == "up" else "passed"
+    action = "added to your watchlist" if last["verdict"] == "up" else "passed"
     with st.container(border=True):
         with st.form("why"):
             st.markdown(f"**{last['name']}** {action}. Why? *(optional, helps Scout learn)*")
@@ -60,26 +61,24 @@ queue = companies.list_companies("new")  # best score first
 if not queue:
     st.success("You're all caught up: no new matches to review.")
     st.write("Use **Run agentic analysis** in the sidebar to find more companies.")
-    st.page_link("views/watchlist.py", label="Go to your watchlist", icon="⭐")
+    st.page_link("views/watchlist.py", label="Go to your watchlist", icon=":material/bookmark:")
     st.stop()
 
 company = queue[0]
-st.caption(f"{len(queue)} to review · best match first")
-
-direction = swipe_card(company)
+direction = swipe_card(company, position=f"1 of {len(queue)}")
 
 # Buttons (and arrow keys) do the same as swiping, for people without a touchscreen or trackpad.
 pass_col, like_col = st.columns(2)
 if pass_col.button("Pass", icon=":material/close:", width="stretch", shortcut="Left",
                    key=f"pass_{company['id']}"):
     direction = "left"
-if like_col.button("Interested", icon=":material/favorite:", type="primary", width="stretch",
+if like_col.button("Interested", icon=":material/check:", type="primary", width="stretch",
                    shortcut="Right", key=f"like_{company['id']}"):
     direction = "right"
 
 with st.expander("More detail: score, founders, traction, sources"):
     render_detail_tabs(company)
-    st.page_link("views/company.py", label="Open full profile", icon="📄",
+    st.page_link("views/company.py", label="Open full profile", icon=":material/open_in_new:",
                  query_params={"id": company["id"]})
 
 if direction:

@@ -72,9 +72,9 @@ def render_changes(company: dict) -> None:
     for check in reversed(checks):
         st.markdown(f"**{check['checked_at'][:10]}**: {check['summary']}")
         if check["exclusion_now_applies"]:
-            st.error(f"⚠️ {check['exclusion_reason']}")
+            st.error(check["exclusion_reason"])
         for change in check["changes"]:
-            mark = "🔔 " if change["significant"] else ""
+            mark = "Significant · " if change["significant"] else ""
             links = ", ".join(f"[{i + 1}]({url})" for i, url in enumerate(change["source_urls"]))
             st.write(f"- {mark}**{change['field']}**: {change['before']} → {change['after']} ({links})")
 
@@ -85,8 +85,8 @@ def render_reviews(company: dict) -> None:
     if not reviews:
         st.write("No reviews yet.")
     for review in reviews:
-        thumb = "👍 Interested" if review["verdict"] == "up" else "👎 Passed"
-        st.write(f"{thumb}: {review['reason'] or '(no reason given)'} · {review['created_at'][:10]}")
+        thumb = "Interested" if review["verdict"] == "up" else "Passed"
+        st.write(f"**{thumb}**: {review['reason'] or '(no reason given)'} · `{review['created_at'][:10]}`")
 
 
 def render_detail_tabs(company: dict) -> None:

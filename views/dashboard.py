@@ -4,17 +4,19 @@
 
 import streamlit as st
 
-from scout import companies, db, feedback, runs
+from scout import companies, db, runs
 from scout.changes import change_status
 from scout.scheduler import next_run_description
 from ui.details import facts_line
-from ui.widgets import metric_card
+from ui.theme import page_header
+from ui.widgets import learned_preferences, metric_card
 
 profile = db.get_fund_profile()
-st.title(f"{profile['fund_name']} · Dashboard" if profile else "Dashboard")
+page_header("Dashboard", profile["fund_name"] if profile else "Your pipeline",
+            "Where your deal flow stands today.")
 if profile is None:
     st.info("Start by describing what your fund invests in.")
-    st.page_link("views/fund_profile.py", label="Set up your Fund Profile", icon="📝")
+    st.page_link("views/fund_profile.py", label="Set up your Fund Profile", icon=":material/tune:")
 
 stats = companies.pipeline_stats()
 watchlist = companies.list_companies("watching")
@@ -59,7 +61,7 @@ with left:
             name_col.caption(facts_line(company))
             score_col.metric("Score", company["score_total"])
     if new:
-        st.page_link("views/explore.py", label="Review all matches", icon="🃏")
+        st.page_link("views/explore.py", label="Review all matches", icon=":material/swipe:")
 
 # --- Alerts, learning, cadence, runs ---
 with right:
@@ -67,16 +69,11 @@ with right:
     if not alerts:
         st.write("No significant changes on your watchlist.")
     for company in alerts:
-        st.page_link("views/company.py", label=company["name"], icon="🔔",
+        st.page_link("views/company.py", label=company["name"], icon=":material/notifications:",
                      query_params={"id": company["id"]})
 
     st.subheader("What Scout has learned")
-    learned = feedback.get_learned_preferences()
-    if learned:
-        st.write(learned["summary"])
-        st.caption(f"From {learned['feedback_count']} of your swipes")
-    else:
-        st.write("Nothing yet. Swipe on companies in Explore and Scout will adapt.")
+    learned_preferences()
 
     st.subheader("Agent activity")
     st.caption(f"Daily cadence: {next_run_description(profile)}")

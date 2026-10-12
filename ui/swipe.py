@@ -6,25 +6,39 @@
 
 import streamlit as st
 
+# Styled to Scout's design system: a near-square card with a hairline border, tabular score,
+# square tags, 6px square list markers, and desaturated colors. The --st-* variables are
+# Streamlit's own theme colors, so the card follows dark or light mode automatically.
 CSS = """
-.card { position: relative; padding: 22px 24px; border-radius: 16px; cursor: grab;
-  border: 1px solid rgba(128,128,128,.3); background: var(--st-secondary-background-color, #f6f6f9);
-  color: var(--st-text-color, inherit); user-select: none; touch-action: pan-y;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12); transition: transform .25s ease, opacity .25s ease; }
+.card { position: relative; padding: 24px 26px 22px; border-radius: 2px; cursor: grab;
+  border: 1px solid var(--st-border-color, rgba(128,128,128,.25));
+  background: var(--st-secondary-background-color, #121418); color: var(--st-text-color, #fdfcfb);
+  font-family: Inter, sans-serif; user-select: none; touch-action: pan-y;
+  transition: transform .25s ease, opacity .25s ease; }
 .card.dragging { transition: none; cursor: grabbing; }
-.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.name { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
-.score { font-size: 1.5rem; font-weight: 700; white-space: nowrap; }
-.score.high { color: #16a34a; } .score.mid { color: #ca8a04; } .score.low { color: #dc2626; }
-.liner { margin: 10px 0 12px; font-size: 1.05rem; opacity: .9; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.chip { font-size: .8rem; padding: 3px 10px; border-radius: 999px; background: rgba(128,128,128,.15); }
-.highlights { margin: 0; padding-left: 18px; font-size: .95rem; }
-.highlights li { margin: 3px 0; }
-.stamp { position: absolute; top: 18px; font-size: 1.3rem; font-weight: 800; padding: 4px 12px;
-  border: 3px solid; border-radius: 8px; opacity: 0; transform: rotate(-12deg); }
-.stamp.yes { left: 18px; color: #16a34a; } .stamp.no { right: 18px; color: #dc2626; transform: rotate(12deg); }
-.hint { text-align: center; font-size: .8rem; opacity: .6; margin-top: 8px; }
+.eyebrow { font-family: 'Geist Mono', monospace; font-size: .7rem; letter-spacing: .16em;
+  text-transform: uppercase; color: #3F8A64; margin-bottom: 10px; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.name { font-size: 1.75rem; font-weight: 600; line-height: 1.15; letter-spacing: -.02em; }
+.score { font-size: 1.75rem; font-weight: 600; white-space: nowrap; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; }
+.score small { font-size: .85rem; font-weight: 500; opacity: .5; margin-left: 2px; }
+.score.high { color: #6E9C7E; } .score.mid { color: #B8955E; } .score.low { color: #B5716A; }
+.liner { margin: 10px 0 16px; font-size: 1rem; line-height: 1.5; opacity: .82; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.chip { font-size: .75rem; padding: 3px 8px; border-radius: 2px;
+  border: 1px solid var(--st-border-color, rgba(128,128,128,.25)); opacity: .85; }
+.rule { height: 1px; background: var(--st-border-color, rgba(128,128,128,.25)); margin: 0 0 14px; }
+.highlights { margin: 0; padding: 0; list-style: none; font-size: .92rem; line-height: 1.5; }
+.highlights li { position: relative; padding-left: 18px; margin: 5px 0; }
+.highlights li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px;
+  background: #3F8A64; }
+.stamp { position: absolute; top: 20px; font-family: 'Geist Mono', monospace; font-size: .85rem;
+  font-weight: 500; letter-spacing: .16em; padding: 5px 10px; border: 1.5px solid; border-radius: 2px;
+  opacity: 0; }
+.stamp.yes { left: 20px; color: #6E9C7E; } .stamp.no { right: 20px; color: #B5716A; }
+.hint { text-align: center; font-family: 'Geist Mono', monospace; font-size: .7rem;
+  letter-spacing: .12em; text-transform: uppercase; opacity: .45; margin-top: 10px; }
 """
 
 JS = """
@@ -43,14 +57,17 @@ export default function(component) {
   const top = make('div', 'top');
   top.append(make('div', 'name', data.name));
   const level = data.score >= 75 ? 'high' : data.score >= 60 ? 'mid' : 'low';
-  top.append(make('div', 'score ' + level, data.score + '/100'));
-  card.append(top, make('div', 'liner', data.one_liner));
+  const score = make('div', 'score ' + level, String(data.score));
+  score.append(make('small', '', '/100'));
+  top.append(score);
+  card.append(make('div', 'eyebrow', 'Match ' + data.position), top, make('div', 'liner', data.one_liner));
   const chips = make('div', 'chips');
   data.chips.forEach(text => chips.append(make('span', 'chip', text)));
   const list = make('ul', 'highlights');
   data.highlights.forEach(text => list.append(make('li', '', text)));
-  card.append(chips, list, make('div', 'stamp yes', 'INTERESTED'), make('div', 'stamp no', 'PASS'));
-  root.append(card, make('div', 'hint', 'Drag the card right if interested, left to pass'));
+  card.append(chips, make('div', 'rule'), list, make('div', 'stamp yes', 'INTERESTED'),
+              make('div', 'stamp no', 'PASS'));
+  root.append(card, make('div', 'hint', 'Drag right to watch  /  left to pass'));
   parentElement.append(root);
 
   // Follow the pointer while dragging; tilt the card and fade in the matching stamp.
@@ -85,7 +102,7 @@ export default function(component) {
 _swipe_component = st.components.v2.component("scout_swipe_card", css=CSS, js=JS)
 
 
-def card_data(company: dict) -> dict:
+def card_data(company: dict, position: str) -> dict:
     """The few facts shown on the card itself; everything else is in "More detail"."""
     chips = [company.get("category"), company.get("stage"), company.get("location"),
              f"Founded {company['founded_year']}" if company.get("founded_year") else None]
@@ -94,16 +111,19 @@ def card_data(company: dict) -> dict:
     if founders:
         highlights.append("Founders: " + ", ".join(founders[:3]))
     return {
-        "name": company["name"], "score": company["score_total"] or 0,
+        "name": company["name"], "score": company["score_total"] or 0, "position": position,
         "one_liner": company.get("one_liner") or "",
         "chips": [str(c) for c in chips if c], "highlights": [str(h) for h in highlights if h],
     }
 
 
-def swipe_card(company: dict) -> str | None:
-    """Show the card. Returns 'right' or 'left' on the run right after a swipe, else None."""
+def swipe_card(company: dict, position: str = "") -> str | None:
+    """Show the card. Returns 'right' or 'left' on the run right after a swipe, else None.
+
+    position is a short label for the card's eyebrow, like "1 of 6".
+    """
     result = _swipe_component(
-        data=card_data(company),
+        data=card_data(company, position),
         key=f"swipe_{company['id']}",  # a new key per company gives each card a fresh start
         on_swiped_change=lambda: None,  # registers "swiped" as a value Python listens for
     )

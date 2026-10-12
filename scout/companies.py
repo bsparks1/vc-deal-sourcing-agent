@@ -119,8 +119,8 @@ def update_founders(company_id: int, founders: list[dict]) -> None:
 
 
 # Where a watchlist company is in the fund's process. Shown as a dropdown on the Watchlist.
-DEAL_STATUSES = {"watching": "👀 Watching", "reached_out": "✉️ Reached out",
-                 "in_conversation": "💬 In conversation"}
+DEAL_STATUSES = {"watching": "Watching", "reached_out": "Reached out",
+                 "in_conversation": "In conversation"}
 
 
 def set_deal_status(company_id: int, deal_status: str) -> None:

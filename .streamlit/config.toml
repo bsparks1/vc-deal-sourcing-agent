@@ -1,7 +1,71 @@
-# Streamlit settings for Scout: a consistent accent color, and no anonymous usage statistics.
-
-[theme]
-primaryColor = "#4F46E5"
+# Scout's design system ("dark editorial"), expressed as Streamlit theme settings.
+# [theme] is the dark default; [theme.light] is the opt-in light variant, chosen from the app's
+# main menu (ui/theme.py makes sure new visitors start on dark). Fonts, corner radii and the
+# severity palette are set here; the few things a theme can't express (eyebrow titles, tabular
+# numbers, square list markers) live in ui/theme.py.
 
 [browser]
 gatherUsageStats = false
+
+[theme]
+base = "dark"
+# Type: Inter for the interface, Geist Mono for ids and code.
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+codeFont = "'Geist Mono':https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap"
+headingFontWeights = [600, 600, 600, 600, 600, 600]
+headingFontSizes = ["2.25rem", "1.5rem", "1.1rem", "1rem", "0.95rem", "0.9rem"]
+baseFontSize = 15
+metricValueFontWeight = 600
+# Shape: panels and cards are nearly square (2px); buttons are the only pills.
+baseRadius = "2px"
+buttonRadius = "full"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
+# Ground: ink background, #121418 surfaces, warm white type, hairline borders.
+backgroundColor = "#0B0C0E"
+secondaryBackgroundColor = "#121418"
+textColor = "#FDFCFB"
+borderColor = "#24272D"
+# Accent: forest green. Links use a lifted blue so they stay readable on dark.
+primaryColor = "#2F6B4F"
+linkColor = "#7FB0E0"
+codeTextColor = "#C9CDD3"
+codeBackgroundColor = "#121418"
+dataframeBorderColor = "#24272D"
+dataframeHeaderBackgroundColor = "#121418"
+# Severity: desaturated, not alarm-bright. red = critical, orange/yellow = warning,
+# blue = info, green = healthy.
+redColor = "#B5716A"
+orangeColor = "#B8955E"
+yellowColor = "#B8A563"
+blueColor = "#7893B0"
+greenColor = "#6E9C7E"
+grayColor = "#6B7078"
+
+[theme.sidebar]
+backgroundColor = "#0E1013"
+secondaryBackgroundColor = "#121418"
+
+[theme.light]
+backgroundColor = "#FAFAF8"
+secondaryBackgroundColor = "#F1F0EC"
+textColor = "#121418"
+borderColor = "#DCDAD4"
+primaryColor = "#2F6B4F"
+linkColor = "#024480"
+codeTextColor = "#2B2F36"
+codeBackgroundColor = "#F1F0EC"
+dataframeBorderColor = "#DCDAD4"
+dataframeHeaderBackgroundColor = "#F1F0EC"
+redColor = "#9C5A53"
+orangeColor = "#9A7743"
+yellowColor = "#8F7F3E"
+blueColor = "#4F6E8F"
+greenColor = "#4E7C5E"
+grayColor = "#8A8E95"
+
+[theme.light.sidebar]
+backgroundColor = "#F4F3EF"
+secondaryBackgroundColor = "#ECEBE6"

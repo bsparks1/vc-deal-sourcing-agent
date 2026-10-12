@@ -12,8 +12,10 @@ from scout import config
 from scout.db import get_connection, now
 
 SUMMARY_PROMPT = """Below are a venture fund's reviews of companies an AI research agent found.
-Write a short paragraph (at most 120 words) of guidance for the agent's next search:
-what kinds of companies the fund liked, what it rejected, and any patterns in its reasons.
+Write guidance for the agent's next search in two parts, separated by one blank line:
+1. A headline: one plain sentence, under 20 words, summing up the fund's taste so far.
+2. A short paragraph (at most 120 words): what kinds of companies the fund liked, what it
+   rejected, and any patterns in its reasons.
 
 Rules:
 - Only state preferences the reviews actually support. Don't invent new criteria.
@@ -23,7 +25,8 @@ Rules:
 - Prefer specific, usable guidance ("skip brands whose founder already runs an established
   company") over vague praise ("the fund likes good companies").
 - If a pattern rests on a single review, say it is tentative.
-- Write it as direct instructions to the agent, in plain text with no headings.
+- Write it as direct instructions to the agent, in plain text with no labels or headings
+  (don't write "Headline:").
 
 REVIEWS (newest first):
 {reviews}

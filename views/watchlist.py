@@ -7,9 +7,10 @@ import streamlit as st
 from scout import companies
 from scout.changes import change_status, check_company
 from ui.details import facts_line
+from ui.theme import page_header
 from ui.widgets import change_badge
 
-st.title("Watchlist")
+page_header("Pipeline", "Watchlist", "Every company you swiped right on, and where each one stands.")
 
 watchlist = companies.list_companies("watching")
 for company in watchlist:  # rows saved before deal statuses existed count as "watching"
@@ -21,7 +22,7 @@ stats = companies.pipeline_stats()
 # The filter comes from the URL (?filter=reached_out), so the dashboard can link straight here.
 # Short labels so six cards fit side by side (the dropdowns use the longer DEAL_STATUSES names).
 FILTERS = {"all": "All", "watching": "Watching", "reached_out": "Reached out",
-           "in_conversation": "In talks", "alerts": "🔔 Alerts"}
+           "in_conversation": "In talks", "alerts": "Alerts"}
 current = st.query_params.get("filter", "all")
 if current not in FILTERS:
     current = "all"
@@ -56,7 +57,8 @@ shown = [c for c in watchlist if current == "all"
 
 left, right = st.columns([3, 1])
 left.subheader(f"{FILTERS[current]} ({len(shown)})")
-if right.button(f"🔄 Check {len(shown)} for changes", disabled=not shown, width="stretch"):
+if right.button(f"Check {len(shown)} for changes", icon=":material/refresh:", disabled=not shown,
+                width="stretch"):
     with st.status("Checking for news since each company was saved...", expanded=True) as status:
         for company in shown:
             status.write(f"Checking {company['name']}...")
@@ -80,7 +82,7 @@ def on_status_change(company_id: int) -> None:
         companies.set_deal_status(company_id, choice)
 
 
-STATUS_OPTIONS = {**companies.DEAL_STATUSES, "passed": "✖ Pass (remove)"}
+STATUS_OPTIONS = {**companies.DEAL_STATUSES, "passed": "Pass (remove)"}
 for company in shown:
     with st.container(border=True):
         info, status_col, score_col = st.columns([5, 2, 1])
