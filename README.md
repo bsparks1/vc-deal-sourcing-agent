@@ -46,19 +46,29 @@ uv run python -m scripts.run_agent --n 1 --focus "functional beverages"
 ## Run the evals
 
 Checks every saved company with two LLM judges: is it really early-stage, and are its founder
-facts backed by sources? Results print to the terminal, are saved in `evals/results/`, and
-(if Phoenix is running) are attached to the agent's traces in Phoenix.
+facts backed by sources? Start Phoenix first, then:
 
 ```bash
-uv run python -m evals.run_evals --limit 3
+uv run python -m evals.run_evals --label baseline
 ```
+
+Where to see the results:
+- **Phoenix > Datasets & Experiments:** each eval run is an experiment over a dataset of
+  your saved companies (one row per company, a column per judge). Open two experiments to
+  compare them side by side.
+- **Phoenix > Projects > scout:** each verdict is also attached to the trace step where the
+  agent saved that company (filter spans with `name == 'save_candidate'`).
+- **evals/results/:** a CSV of every run (also written when Phoenix isn't running).
 
 ## Compare evals (the fix loop)
 
-Label each eval run, make one change, re-run, then compare the two newest results:
+Label each eval run, make one change, re-run on the same agent runs, then compare. Evaluating
+the same companies reuses the same Phoenix dataset, so the experiments line up side by side
+in Phoenix; `evals.compare` shows the same comparison in the terminal.
 
 ```bash
 uv run python -m evals.run_evals --runs 1 3 --label baseline
+uv run python -m evals.run_evals --runs 1 3 --label after-fix
 uv run python -m evals.compare
 ```
 

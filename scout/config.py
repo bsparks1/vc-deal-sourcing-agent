@@ -23,7 +23,8 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY") or None
 # --- Settings (sensible defaults, overridable in .env) ---
 MODEL = os.getenv("MODEL") or "claude-sonnet-5-5"
 DB_PATH = "scout.db"  # SQLite file, created in the project folder in Build Step 2
-PHOENIX_ENDPOINT = "http://localhost:6006"  # where `uv run phoenix serve` listens
+# Where `uv run phoenix serve` listens. Can be overridden in .env (e.g. a second Phoenix).
+PHOENIX_ENDPOINT = os.getenv("PHOENIX_ENDPOINT") or "http://localhost:6006"
 
 # --- Web tool limits (scout/tools.py) ---
 SEARCH_MAX_RESULTS = 5  # results per search; more costs tokens without helping much

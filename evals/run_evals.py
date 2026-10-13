@@ -1,9 +1,9 @@
-# Runs the two LLM-as-judge evals (evals/judges.py) on every company the agent has saved,
-# prints a report, saves the results to evals/results/ (to compare runs over time in Step 11),
-# and logs each result to Phoenix on the save_candidate span where the agent saved that company.
-#   uv run python -m evals.run_evals                       (all companies)
-#   uv run python -m evals.run_evals --limit 3             (just the 3 newest: quick and cheap)
-#   uv run python -m evals.run_evals --runs 4 5 --label after-fix  (only those agent runs)
+# Runs the two LLM-as-judge evals (evals/judges.py) on the companies the agent has saved.
+# With Phoenix running, the evals run as a Phoenix experiment (see evals/experiment.py), so
+# results appear under Datasets & Experiments and are also attached to the trace step where
+# the agent saved each company. Results are always saved to evals/results/ as a CSV too.
+#   uv run python -m evals.run_evals                                (all saved companies)
+#   uv run python -m evals.run_evals --runs 4 5 --label after-fix   (only those agent runs)
 
 import argparse
 import json
@@ -14,6 +14,7 @@ from phoenix.client import Client
 from phoenix.client.types.spans import SpanQuery
 from phoenix.evals import evaluate_dataframe
 
+from evals.experiment import run_as_experiment
 from evals.judges import early_stage, founders_supported
 from scout import companies, config, db
 from scout.tracing import phoenix_is_running
@@ -22,7 +23,7 @@ EVALUATORS = [early_stage, founders_supported]
 RESULTS_DIR = config.PROJECT_DIR / "evals" / "results"
 
 
-def load_companies(limit: int | None, run_ids: list[int] | None) -> pd.DataFrame:
+def load_companies(run_ids: list[int] | None) -> pd.DataFrame:
     """Load saved companies (every status) into a table with the columns the judges need.
 
     run_ids limits it to companies from those agent runs, e.g. the runs made after a fix.
@@ -31,7 +32,6 @@ def load_companies(limit: int | None, run_ids: list[int] | None) -> pd.DataFrame
     if run_ids:
         rows = [c for c in rows if c["run_id"] in run_ids]
     rows.sort(key=lambda c: c["id"], reverse=True)  # newest first
-    rows = rows[:limit] if limit else rows
     return pd.DataFrame([{
         "id": c["id"], "name": c["name"], "domain": c["domain"],
         "stage": c["stage"] or "unknown", "funding": c["funding_summary"] or "unknown",
@@ -93,20 +93,25 @@ def log_to_phoenix(table: pd.DataFrame) -> int:
 def main() -> None:
     """Run the evals, then report, save, and log the results."""
     parser = argparse.ArgumentParser(description="Evaluate the companies Scout has saved.")
-    parser.add_argument("--limit", type=int, default=None, help="Only the N newest companies")
     parser.add_argument("--runs", type=int, nargs="+", help="Only companies from these run ids")
     parser.add_argument("--label", default="", help='Name for this eval, e.g. "baseline"')
     args = parser.parse_args()
 
     config.require_keys()
     db.init_db()
-    data = load_companies(args.limit, args.runs)
+    data = load_companies(args.runs)
     if data.empty:
         print("No saved companies to evaluate yet. Run the agent first.")
         return
 
     print(f"Evaluating {len(data)} companies (2 judges each; about 20-40s per company)...")
-    table = flatten(evaluate_dataframe(data, EVALUATORS, hide_tqdm_bar=False))
+    phoenix_on = phoenix_is_running()
+    if phoenix_on:
+        # Find the trace step that saved each company, then run the evals as an experiment.
+        data = save_span_ids(data)
+        table, experiment_url = run_as_experiment(data, args.runs, args.label)
+    else:
+        table = flatten(evaluate_dataframe(data, EVALUATORS, hide_tqdm_bar=False))
 
     print()
     for _, row in table.iterrows():
@@ -124,15 +129,17 @@ def main() -> None:
     table.to_csv(path, index=False)
     print(f"\nSaved results to {path.relative_to(config.PROJECT_DIR)}")
 
-    if phoenix_is_running():
+    if phoenix_on:
+        print(f"\nIn Phoenix (Datasets & Experiments): {experiment_url}")
         try:
-            linked = log_to_phoenix(save_span_ids(table))
-            print(f"Logged to Phoenix on {linked} of {len(table)} companies "
+            # Also attach each verdict to the trace step that saved the company.
+            linked = log_to_phoenix(table.merge(data[["id", "span_id"]], on="id"))
+            print(f"Also attached to {linked} of {len(table)} companies' traces "
                   "(the rest were saved while Phoenix wasn't running).")
-        except Exception as error:  # the results are already saved in the CSV
-            print(f"Couldn't log to Phoenix ({error}); the CSV has the results.")
+        except Exception as error:  # the results are already in the experiment and CSV
+            print(f"Couldn't attach results to traces ({error}).")
     else:
-        print("Phoenix isn't running, so results weren't logged there (the CSV has them).")
+        print("Phoenix isn't running, so results are only in the CSV.")
 
 
 if __name__ == "__main__":
