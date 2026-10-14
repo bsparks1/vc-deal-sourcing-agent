@@ -19,6 +19,7 @@ from scout.web import get_tavily_client
 
 # Note: for @tool functions, the docstring is also the instruction the model sees,
 # so it is written for the model: what the tool does and when to use it.
+# [A3 Tools] One of the six tools the agent can call (see TOOLS in scout/agent.py).
 @tool
 def search_web(query: str) -> dict:
     """Search the web and return the top results (title, url, snippet) for a query.
@@ -32,6 +33,7 @@ def search_web(query: str) -> dict:
             max_results=config.SEARCH_MAX_RESULTS,
             search_depth="basic",  # the cheaper, faster mode; good enough for discovery
         )
+    # [A4 Tool results] Errors come back as data, not crashes, so the agent can adapt.
     except Exception as error:
         # Return the error instead of crashing, so the agent can see what went wrong
         # and try a different query (one failed search shouldn't end a whole run).
@@ -75,6 +77,7 @@ def read_page(url: str) -> dict:
 # Scores from score_against_thesis, keyed by domain. save_candidate reads the score from
 # here, so the agent can't save a company it never scored, or type in a made-up score.
 # (Kept in memory: fine for one process; it resets when the app restarts.)
+# [A8 State] Tool-side state the model can't edit: save_candidate reads the real score here.
 SCORES: dict[str, dict] = {}
 # Same idea for founders: save_candidate stores the researched (source-checked) founders,
 # not names the agent typed in itself.
@@ -112,6 +115,8 @@ def research_founders(company_name: str, domain: str, extra_urls: list[str] | No
     return result
 
 
+# [A7 Specialist LLM calls] The agent delegates judgment to a separate, focused LLM call
+# (scoring.py) with its own rubric and fixed output shape, instead of scoring in its head.
 @tool
 def score_against_thesis(company_name: str, domain: str, company_facts: str) -> dict:
     """Score a company 0-100 against the fund's thesis and rubric.
@@ -159,9 +164,12 @@ def save_candidate(
     """
     # run_config is filled in by LangGraph, not the model (LangChain spots the RunnableConfig
     # type and hides it from the model). It carries the current run's id.
+    # [A8 State] run_config is injected by LangGraph and hidden from the model (not a tool argument).
     run_id = run_config["configurable"].get("run_id")
     key = companies.normalize_domain(domain)
 
+    # [A5 Guardrails in code] Deterministic checks around the LLM: no score, low score, or no
+    # sources means no save, whatever the model says. Refusals go back as data so it moves on.
     # Hard rules live in code, not just in the prompt (the lesson from Step 4).
     score = SCORES.get(key)
     if score is None:

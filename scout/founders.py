@@ -100,6 +100,7 @@ def research_founders(company_name: str, domain: str, extra_urls: list[str] | No
 
     # Code check: keep only source URLs that were really in the search results (a model can
     # mistype or invent a URL), and drop any founder left with no real source at all.
+    # [A5 Guardrails in code] Verify citations: keep only URLs we actually fetched, drop unsourced founders.
     fetched = {item["url"] for item in evidence}
     founders = []
     for founder in result.founders:

@@ -52,6 +52,7 @@ def read_pages(urls: list[str], limit: int = 3) -> str:
     return "\n\n".join(pages) or "(source pages could not be read)"
 
 
+# [A12 Evals] The judge gathers its own evidence instead of re-reading the agent's claims.
 def independent_search(name: str) -> str:
     """Search for funding/retail news about the company: evidence the agent may have missed."""
     response = get_tavily_client().search(
@@ -60,6 +61,7 @@ def independent_search(name: str) -> str:
                        for r in response.get("results", []))
 
 
+# [A6 Structured output] Each verdict is a fixed label plus an explanation.
 def ask_judge(prompt: str, verdict_type: type[Verdict]) -> Verdict:
     """Send one judging prompt to Claude and get back a structured verdict."""
     llm = ChatAnthropic(model=config.MODEL, api_key=config.ANTHROPIC_API_KEY,
@@ -107,6 +109,7 @@ EARLY_SCORES = {"early_stage": 1.0, "unclear": 0.5, "not_early_stage": 0.0}
 FOUNDER_SCORES = {"supported": 1.0, "partially_supported": 0.5, "unsupported": 0.0}
 
 
+# [A12 Evals] LLM-as-judge for the v1 failure mode: is this company really early-stage?
 @create_evaluator(name="early_stage", kind="llm")
 def early_stage(name: str, domain: str, stage: str, funding: str, traction: str,
                 sources: list) -> Score:

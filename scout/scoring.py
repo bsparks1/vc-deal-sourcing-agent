@@ -93,6 +93,7 @@ def score_company(company_facts: str, profile: dict) -> dict:
     )
     # "json_schema" uses Anthropic's native structured outputs: the API guarantees the reply
     # matches CompanyScore's JSON schema, and LangChain turns it into a CompanyScore object.
+    # [A6 Structured output] The API guarantees the reply matches the CompanyScore schema.
     scorer = llm.with_structured_output(CompanyScore, method="json_schema")
 
     # Fill the {placeholders} in the prompt; "or ''" avoids printing "None" for empty fields.
@@ -104,6 +105,7 @@ def score_company(company_facts: str, profile: dict) -> dict:
         ("user", f"Score this company.\n\nFACTS:\n{company_facts}"),
     ])
 
+    # [A5 Guardrails in code] The model judges; code enforces ranges, adds the total, and caps it.
     breakdown = clamp_scores(result.breakdown)
     # The total is added up in code, not by the model, so it always equals the parts.
     total = sum(breakdown.values())

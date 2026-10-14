@@ -11,6 +11,8 @@ from langchain_anthropic import ChatAnthropic
 from scout import config
 from scout.db import get_connection, now
 
+# [A10 Human in the loop] Swipes and reasons from the fund become a short summary that the
+# agent reads on its next run (see LEARNED_SECTION in agent.py).
 SUMMARY_PROMPT = """Below are a venture fund's reviews of companies an AI research agent found.
 Write guidance for the agent's next search in two parts, separated by one blank line:
 1. A headline: one plain sentence, under 20 words, summing up the fund's taste so far.

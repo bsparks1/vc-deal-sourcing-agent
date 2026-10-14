@@ -41,6 +41,8 @@ def setup_tracing() -> bool:
 
     # register() creates an OpenTelemetry "tracer provider": the object that collects spans
     # and ships them to Phoenix's collector URL in the background.
+    # [A11 Observability] OpenTelemetry + OpenInference: every model call and tool call becomes a
+    # span in Phoenix, with inputs, outputs, tokens and latency. No tracing code inside the tools.
     tracer_provider = register(
         project_name=config.PHOENIX_PROJECT,
         endpoint=f"{config.PHOENIX_ENDPOINT}/v1/traces",

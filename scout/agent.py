@@ -14,9 +14,12 @@ from scout.tools import (check_watchlist, read_page, research_founders, save_can
                          score_against_thesis, search_web)
 from scout.tracing import setup_tracing
 
+# [A3 Tools] The only actions the agent can take. The model picks among these; code runs them.
 TOOLS = [search_web, read_page, check_watchlist, research_founders, score_against_thesis,
          save_candidate]
 
+# [A2 Context engineering] The agent's standing instructions: who it is, the fund's thesis,
+# a step-by-step way of working, and rules. Filled in per run by build_system_prompt().
 SYSTEM_PROMPT = """You are Scout, a venture analyst who finds very early-stage companies
 for one fund. You research the web on your own using your tools.
 
@@ -56,6 +59,8 @@ RULES
 {learned_section}"""
 
 # Added to the prompt only once the fund has reviewed some companies (Step 7).
+# [A8 Memory] Long-term memory via in-context learning: a summary of the fund's swipes is
+# added to the prompt. No fine-tuning; what the agent was told is visible in every trace.
 LEARNED_SECTION = """
 WHAT THIS FUND HAS TAUGHT YOU (from its thumbs up / down on past results)
 {preferences}
@@ -87,6 +92,8 @@ def build_agent(profile: dict, target: int, preferences: str | None = None):
     )
     # create_react_agent builds the loop: call the model -> if it asked for tools, run them
     # and send the results back -> repeat until the model replies without a tool call.
+    # [A1 Agent loop] ReAct: the model reasons, calls a tool, sees the result, and repeats
+    # until it answers without a tool call. This loop is what makes Scout an agent, not a pipeline.
     return create_react_agent(llm, TOOLS, prompt=build_system_prompt(profile, target, preferences))
 
 
@@ -118,6 +125,7 @@ def run_agent(target: int = 3, focus: str = "", on_step: Callable[[str], None] =
     learned = feedback.get_learned_preferences()  # None until the fund reviews something
     agent = build_agent(profile, target, learned["summary"] if learned else None)
 
+    # [A9 Limits] Agents need brakes: a hard step cap so a confused run stops instead of looping.
     run_settings = {
         "recursion_limit": config.AGENT_MAX_STEPS,  # hard stop so a run can't loop forever
         "configurable": {"run_id": run_id},  # passed through to save_candidate
@@ -125,6 +133,7 @@ def run_agent(target: int = 3, focus: str = "", on_step: Callable[[str], None] =
     summary, status, error = "", "completed", None
     try:
         # stream_mode="updates" yields after each step, so we can show progress live.
+        # [A1 Agent loop] Streaming yields after every step, so the UI shows each tool call live.
         for update in agent.stream({"messages": [("user", request)]}, run_settings,
                                    stream_mode="updates"):
             for step in update.values():

@@ -2,6 +2,9 @@
 
 An agentic deal-sourcing analyst for VC funds. See `SPEC.md` for the full plan.
 
+**Start here:** [ARCHITECTURE.md](ARCHITECTURE.md) explains the agentic system, where each
+concept lives in the code (search for tags like `[A5`), and the decisions behind it.
+
 ## How it's organized
 
 - `app.py`: the entry point and router. Shared setup, the sidebar's "Run agentic analysis" button, page menu.

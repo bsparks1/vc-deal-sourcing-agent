@@ -18,6 +18,7 @@ def to_local(timestamp: str) -> datetime:
     return datetime.fromisoformat(timestamp).astimezone()
 
 
+# [A13 Autonomy] The agent runs on a schedule without a person clicking Run.
 def is_run_due(profile: dict | None, now: datetime, last_scheduled_start: datetime | None) -> bool:
     """Decide whether a scheduled run should start now.
 

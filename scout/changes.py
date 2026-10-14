@@ -97,6 +97,7 @@ def check_company(company: dict) -> dict:
 
     llm = ChatAnthropic(model=config.MODEL, api_key=config.ANTHROPIC_API_KEY,
                         max_tokens=config.SCORING_MAX_TOKENS)
+    # [A6 Structured output] Changes come back in a fixed shape so they can be stored and compared.
     report: ChangeReport = llm.with_structured_output(ChangeReport, method="json_schema").invoke(prompt)
 
     # Same source check as founder research: keep only URLs we really fetched, and drop any
