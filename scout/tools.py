@@ -31,7 +31,7 @@ def search_web(query: str) -> dict:
         response = get_tavily_client().search(
             query=query,
             max_results=config.SEARCH_MAX_RESULTS,
-            search_depth="basic",  # the cheaper, faster mode; good enough for discovery
+            search_depth=config.SEARCH_DEPTH,  # a fast mode: discovery doesn't need more
         )
     # [A4 Tool results] Errors come back as data, not crashes, so the agent can adapt.
     except Exception as error:
@@ -41,7 +41,9 @@ def search_web(query: str) -> dict:
 
     # Keep only the fields the agent needs; Tavily returns extra metadata we'd pay tokens for.
     results = [
-        {"title": r.get("title", ""), "url": r.get("url", ""), "snippet": r.get("content", "")}
+        # Snippets are cut short: they only need to say whether a page is worth reading.
+        {"title": r.get("title", ""), "url": r.get("url", ""),
+         "snippet": r.get("content", "")[: config.SNIPPET_MAX_CHARS]}
         for r in response.get("results", [])
     ]
     return {"query": query, "results": results}

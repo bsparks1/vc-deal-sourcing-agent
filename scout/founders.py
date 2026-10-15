@@ -3,6 +3,8 @@
 # then checks that every founder is backed by a URL we actually fetched. Used by the
 # research_founders tool (scout/tools.py) and the "Research founders" button on the Company page.
 
+from concurrent.futures import ThreadPoolExecutor
+
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel, Field
 
@@ -57,11 +59,16 @@ def gather_evidence(company_name: str, domain: str, extra_urls: list[str]) -> li
     ]
     results = {}  # keyed by URL, so a page found by both searches appears once
     client = get_tavily_client()
-    for query in queries:
-        # "advanced" depth costs more than "basic" but returns more relevant text per result,
-        # which matters here: founder details are usually one line deep inside a page.
-        response = client.search(query=query, max_results=config.SEARCH_MAX_RESULTS,
-                                 search_depth="advanced")
+
+    def search(query: str) -> dict:
+        return client.search(query=query, max_results=config.SEARCH_MAX_RESULTS,
+                             search_depth=config.FOUNDER_SEARCH_DEPTH)
+
+    # Run both searches at the same time instead of one after the other (they're waiting on
+    # the network, not the computer, so two threads halve the wait).
+    with ThreadPoolExecutor(max_workers=len(queries)) as pool:
+        responses = list(pool.map(search, queries))
+    for response in responses:
         for item in response.get("results", []):
             results[item["url"]] = {"url": item["url"], "title": item.get("title", ""),
                                     "text": item.get("content", "")}

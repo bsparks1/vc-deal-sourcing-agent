@@ -29,6 +29,11 @@ PHOENIX_ENDPOINT = os.getenv("PHOENIX_ENDPOINT") or "http://localhost:6006"
 # --- Web tool limits (scout/tools.py) ---
 SEARCH_MAX_RESULTS = 5  # results per search; more costs tokens without helping much
 PAGE_MAX_CHARS = 8000  # cap on page text sent to the model, so one huge page can't flood it
+# Speed settings (tuned for live demos; measured on a 3-company run that took 230s):
+SEARCH_DEPTH = "fast"  # Tavily mode for the agent's searches: ~1.3s vs ~2.2s for "basic"
+FOUNDER_SEARCH_DEPTH = "basic"  # ~2.2s vs ~4.4s for "advanced"; the founder eval checks quality
+SNIPPET_MAX_CHARS = 500  # per search result; keeps the conversation (and every later call) small
+AGENT_EFFORT = "medium"  # how hard Claude thinks per step; "high" (the default) is slower
 
 # --- Scoring (scout/scoring.py) ---
 SCORING_MAX_TOKENS = 16000  # room for the model's reasoning plus the JSON score

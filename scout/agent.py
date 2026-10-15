@@ -38,7 +38,8 @@ Signals that rule a company out:
 HOW TO WORK
 1. Use search_web to find candidate companies. Prefer searches that surface small, new
    brands (launch announcements, local press, founder interviews, "new brand" roundups),
-   not market overviews, which mostly list famous brands.
+   not market overviews, which mostly list famous brands. Be efficient: make each search
+   count, and aim for at most 4 searches per company you save.
 2. For each candidate, call check_watchlist first. Skip any that are already saved.
 3. Drop obviously established companies right away, without scoring them: anything you
    recognize as well known, in national retail, or with a priced VC round.
@@ -86,6 +87,8 @@ def build_agent(profile: dict, target: int, preferences: str | None = None):
         model=config.MODEL,
         api_key=config.ANTHROPIC_API_KEY,
         max_tokens=config.AGENT_MAX_TOKENS,
+        # Medium effort: less thinking per step, so each of the ~10 steps per company is faster.
+        output_config={"effort": config.AGENT_EFFORT},
         # Same safety-filter fallback as scoring.py (see the comment there).
         betas=["server-side-fallback-2026-07-01"],
         model_kwargs={"fallbacks": "default"},

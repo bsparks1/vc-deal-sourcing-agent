@@ -5,6 +5,8 @@
 # scout/feedback.py.
 
 import json
+import re
+import unicodedata
 from datetime import datetime, timedelta, timezone
 
 from scout.db import get_connection, now
@@ -20,17 +22,37 @@ def normalize_domain(url_or_domain: str) -> str:
     return text.removeprefix("www.")
 
 
+def simplify_name(name: str) -> str:
+    """'LĪNA (Lina Universal Balm)' -> 'lina lina universal balm': lowercase, no accents or
+    punctuation, so small spelling differences don't hide a company we already have."""
+    plain = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", plain.lower()).split())
+
+
 def find_company(name_or_domain: str) -> dict | None:
-    """Return a saved company matching this domain or (case-insensitive) name, or None."""
+    """Return a saved company matching this domain or name, or None.
+
+    Names match loosely: "Lina Universal Balm" finds "LĪNA (Lina Universal Balm)". Missing a
+    match is expensive (the agent researches and scores the company again before the save is
+    refused), so near-matches count. Very short names must match exactly, to avoid false hits.
+    """
     conn = get_connection()
     try:
-        row = conn.execute(
-            "SELECT * FROM companies WHERE domain = ? OR lower(name) = lower(?)",
-            (normalize_domain(name_or_domain), name_or_domain.strip()),
-        ).fetchone()
+        row = conn.execute("SELECT * FROM companies WHERE domain = ?",
+                           (normalize_domain(name_or_domain),)).fetchone()
+        rows = conn.execute("SELECT * FROM companies").fetchall() if row is None else []
     finally:
         conn.close()
-    return dict(row) if row else None
+    if row:
+        return dict(row)
+
+    wanted = simplify_name(name_or_domain)
+    for candidate in rows:
+        saved = simplify_name(candidate["name"])
+        if wanted == saved or (min(len(wanted), len(saved)) >= 5
+                               and (wanted in saved or saved in wanted)):
+            return dict(candidate)
+    return None
 
 
 def save_company(company: dict) -> int:

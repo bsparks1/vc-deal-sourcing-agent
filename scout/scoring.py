@@ -86,6 +86,8 @@ def score_company(company_facts: str, profile: dict) -> dict:
         model=config.MODEL,
         api_key=config.ANTHROPIC_API_KEY,
         max_tokens=config.SCORING_MAX_TOKENS,
+        # Medium effort keeps scoring quick; the rubric and code rules do the heavy lifting.
+        output_config={"effort": config.AGENT_EFFORT},
         # If the model's safety filter wrongly declines a request, Anthropic re-runs it on a
         # suitable fallback model inside the same call, instead of returning an empty answer.
         betas=["server-side-fallback-2026-07-01"],
